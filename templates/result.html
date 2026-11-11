@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>DiabetesXAI — Result</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f0f4f8;
+      display: flex;
+      justify-content: center;
+      padding: 40px 16px;
+    }
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.10);
+      padding: 36px 40px;
+      width: 100%;
+      max-width: 600px;
+    }
+    h1 { font-size: 1.4rem; color: #1a202c; margin-bottom: 20px; }
+
+    .result-banner {
+      padding: 16px 20px;
+      border-radius: 8px;
+      margin-bottom: 24px;
+      font-size: 1.1rem;
+      font-weight: 700;
+      text-align: center;
+    }
+    .diabetic     { background: #fed7d7; color: #c53030; }
+    .non-diabetic { background: #c6f6d5; color: #276749; }
+
+    .prob-bar-wrap { margin-bottom: 28px; }
+    .prob-label { font-size: 0.85rem; color: #718096; margin-bottom: 6px; }
+    .prob-track {
+      background: #e2e8f0;
+      border-radius: 99px;
+      height: 14px;
+      overflow: hidden;
+    }
+    .prob-fill {
+      height: 100%;
+      border-radius: 99px;
+      transition: width 0.5s ease;
+    }
+    .diabetic-fill     { background: #fc8181; }
+    .non-diabetic-fill { background: #68d391; }
+    .prob-pct { font-size: 0.9rem; font-weight: 700; margin-top: 5px; }
+
+    h2 { font-size: 1rem; color: #4a5568; margin-bottom: 14px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; }
+
+    .shap-row {
+      display: flex;
+      align-items: center;
+      margin-bottom: 10px;
+      gap: 10px;
+    }
+    .shap-feature {
+      width: 190px;
+      font-size: 0.82rem;
+      color: #4a5568;
+      flex-shrink: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .shap-bar-wrap {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      height: 18px;
+    }
+    .shap-bar {
+      height: 18px;
+      border-radius: 3px;
+      min-width: 2px;
+    }
+    .pos { background: #fc8181; }
+    .neg { background: #63b3ed; }
+    .shap-val { font-size: 0.78rem; color: #718096; white-space: nowrap; }
+
+    .legend { display: flex; gap: 20px; margin-bottom: 18px; font-size: 0.78rem; color: #718096; }
+    .legend span { display: flex; align-items: center; gap: 5px; }
+    .dot { width: 12px; height: 12px; border-radius: 2px; }
+
+    .back-btn {
+      display: inline-block;
+      margin-top: 24px;
+      padding: 10px 20px;
+      background: #4299e1;
+      color: #fff;
+      border-radius: 7px;
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+    .back-btn:hover { background: #3182ce; }
+  </style>
+</head>
+<body>
+<div class="card">
+  <h1>🧠 DiabetesXAI — Prediction Result</h1>
+
+  <!-- Result banner -->
+  <div class="result-banner {% if prediction == 'Diabetic' %}diabetic{% else %}non-diabetic{% endif %}">
+    {{ prediction }}
+  </div>
+
+  <!-- Probability bar -->
+  <div class="prob-bar-wrap">
+    <div class="prob-label">Predicted probability of diabetes</div>
+    <div class="prob-track">
+      <div class="prob-fill {% if prediction == 'Diabetic' %}diabetic-fill{% else %}non-diabetic-fill{% endif %}"
+           style="width: {{ probability }}%"></div>
+    </div>
+    <div class="prob-pct">{{ probability }}%</div>
+  </div>
+
+  <!-- SHAP feature contributions -->
+  <h2>Feature Contributions (SHAP)</h2>
+  <div class="legend">
+    <span><span class="dot pos"></span> Increases risk</span>
+    <span><span class="dot neg"></span> Decreases risk</span>
+  </div>
+
+  {% set max_abs = namespace(val=0.0001) %}
+  {% for feat, val in shap_values.items() %}
+    {% if val|abs > max_abs.val %}{% set max_abs.val = val|abs %}{% endif %}
+  {% endfor %}
+
+  {# Sort by absolute SHAP value descending #}
+  {% for feat, val in shap_values.items() %}
+  <div class="shap-row">
+    <div class="shap-feature" title="{{ feat }} = {{ input_values[feat] }}">
+      {{ feat }}<br><small style="color:#a0aec0">{{ input_values[feat] }}</small>
+    </div>
+    <div class="shap-bar-wrap">
+      {% set bar_pct = (val|abs / max_abs.val * 100)|round %}
+      {% if val >= 0 %}
+        <div class="shap-bar pos" style="width: {{ bar_pct }}%"></div>
+      {% else %}
+        <div class="shap-bar neg" style="width: {{ bar_pct }}%"></div>
+      {% endif %}
+    </div>
+    <div class="shap-val">{{ "%+.4f"|format(val) }}</div>
+  </div>
+  {% endfor %}
+
+  <a href="/" class="back-btn">← Predict Again</a>
+</div>
+</body>
+</html>
